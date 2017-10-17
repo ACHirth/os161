@@ -4,6 +4,7 @@
 build
 cscope.out
 tags
+root
 kern/compile/ASST*
 # Automatically generated.
 user/testbin/randcall/calls.c
