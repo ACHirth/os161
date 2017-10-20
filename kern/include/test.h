@@ -67,6 +67,8 @@ int uwlocktest1(int, char **);
 int uwvmstatstest(int, char **);
 #endif
 
+void hello(void);
+
 /* filesystem tests */
 int fstest(int, char **);
 int readstress(int, char **);

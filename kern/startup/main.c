@@ -50,6 +50,7 @@
 #include <test.h>
 #include <version.h>
 #include "autoconf.h"  // for pseudoconfig
+#include "opt-A0.h"
 
 
 /*
@@ -95,6 +96,10 @@ boot(void)
 	 * anything at all. You can make it larger though (it's in
 	 * dev/generic/console.c).
 	 */
+	
+	#if OPT_A0
+		hello();
+	#endif /* OPT_A0 */
 
 	kprintf("\n");
 	kprintf("OS/161 base system version %s\n", BASE_VERSION);
