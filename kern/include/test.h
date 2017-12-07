@@ -47,6 +47,9 @@ int catmouse(int, char **);
  * Test code.
  */
 
+/* my test */
+int mytest(int, char **);
+
 /* lib tests */
 int arraytest(int, char **);
 int bitmaptest(int, char **);

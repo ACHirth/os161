@@ -155,7 +155,7 @@ common_prog(int nargs, char **args)
 #ifdef UW
 	/* wait until the process we have just launched - and any others that it 
 	   may fork - is finished before proceeding */
-	P(no_proc_sem);
+		P(no_proc_sem); 
 #endif // UW
 
 	return 0;
@@ -452,6 +452,7 @@ cmd_opsmenu(int n, char **a)
 }
 
 static const char *testmenu[] = {
+	"[mt]  my test lol                   ",
 	"[at]  Array test                    ",
 	"[bt]  Bitmap test                   ",
 	"[km1] Kernel malloc test            ",
@@ -559,6 +560,8 @@ static struct {
 
 	/* stats */
 	{ "kh",         cmd_kheapstats },
+
+	{ "mt", 		mytest },
 
 	/* base system tests */
 	{ "at",		arraytest },
