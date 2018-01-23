@@ -46,6 +46,7 @@
 #include "opt-sfs.h"
 #include "opt-net.h"
 
+#include <current.h>
 /*
  * In-kernel menu and command dispatcher.
  */
@@ -103,6 +104,18 @@ cmd_progthread(void *ptr, unsigned long nargs)
 	strcpy(progname, args[0]);
 
 	result = runprogram(progname);
+	if (result == ENOENT){
+		kprintf("Running program %s failed: %s\n", args[0],
+			strerror(result));
+		struct proc *p = curproc;
+		KASSERT(p->p_addrspace == NULL);
+		proc_remthread(curthread);
+		proc_destroy(p);
+		thread_exit();
+		return;
+		// David is a magician. However, this never triggers running program failed, and erroring out should be handled by a more robust error system
+	
+	}
 	if (result) {
 		kprintf("Running program %s failed: %s\n", args[0],
 			strerror(result));
