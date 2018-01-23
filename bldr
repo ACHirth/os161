@@ -1,0 +1,13 @@
+if [ $# -eq 0 ]; then
+    echo "No argument supplied."
+elif [ $1 == "a" ]; then
+    echo "Building ASST1..."
+    cd kern/compile/ASST1
+    bmake depend
+    bmake
+    bmake install
+elif [ $1 == "r" ]; then
+    cd root
+    sys161 kernel
+    cd ..
+fi
