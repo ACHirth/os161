@@ -63,47 +63,19 @@ static
 void
 loudthread(void *junk, unsigned long num)
 {
-	int ch = '0' + num;
-	int i;
+	char ch = '0'+num;
 
 	(void)junk;
 	P(csem);
-	for (i=0; i<120; i++) {
-		putch(ch);
-	}
+		kprintf("The char is: %c\n", ch);
 	V(csem);
 	V(tsem);
 }
 
-/*
- * The idea with this is that you should see
- *
- *   01234567 <pause> 01234567
- *
- * (possibly with the numbers in different orders)
- *
- * The delay loop is supposed to be long enough that it should be clear
- * if either timeslicing or the scheduler is not working right.
- */
-static
-void
-quietthread(void *junk, unsigned long num)
-{
-	int ch = '0' + num;
-	volatile int i;
-
-	(void)junk;
-	P(csem);
-	putch(ch);
-	for (i=0; i<200000; i++);
-	putch(ch);
-	V(csem);
-	V(tsem);
-}
 
 static
 void
-runthreads(int doloud)
+runthreads()
 {
 	char name[16];
 	int i, result;
@@ -111,7 +83,7 @@ runthreads(int doloud)
 	for (i=0; i<NTHREADS; i++) {
 		snprintf(name, sizeof(name), "threadtest%d", i);
 		result = thread_fork(name, NULL,
-				     doloud ? loudthread : quietthread,
+				     loudthread,
 				     NULL, i);
 		if (result) {
 			panic("threadtest: thread_fork failed %s)\n", 
@@ -133,7 +105,7 @@ threadtest(int nargs, char **args)
 
 	init_sem();
 	kprintf("Starting thread test...\n");
-	runthreads(1);
+	runthreads();
 	kprintf("\nThread test done.\n");
 
 	return 0;
@@ -146,9 +118,7 @@ threadtest2(int nargs, char **args)
 	(void)args;
 
 	init_sem();
-	kprintf("Starting thread test 2...\n");
-	runthreads(0);
-	kprintf("\nThread test 2 done.\n");
+	kprintf("No longer implemented...");
 
 	return 0;
 }
