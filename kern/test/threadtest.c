@@ -63,11 +63,12 @@ static
 void
 loudthread(void *junk, unsigned long num)
 {
-	char ch = '0'+num;
-
-	(void)junk;
+	char **args = junk;
+	int nargs = num;
 	P(csem);
-		kprintf("The char is: %c\n", ch);
+		for(int i = 0; i < nargs; i++){
+			kprintf("The char is: %s\n", args[i]);
+		}
 	V(csem);
 	V(tsem);
 }
@@ -75,8 +76,11 @@ loudthread(void *junk, unsigned long num)
 
 static
 void
-runthreads()
+runthreads(int nargs, char **args)
 {
+	(void)nargs;
+	(void)args;
+	
 	char name[16];
 	int i, result;
 
@@ -84,7 +88,7 @@ runthreads()
 		snprintf(name, sizeof(name), "threadtest%d", i);
 		result = thread_fork(name, NULL,
 				     loudthread,
-				     NULL, i);
+				     args, nargs);
 		if (result) {
 			panic("threadtest: thread_fork failed %s)\n", 
 			      strerror(result));
@@ -100,12 +104,10 @@ runthreads()
 int
 threadtest(int nargs, char **args)
 {
-	(void)nargs;
-	(void)args;
 
 	init_sem();
 	kprintf("Starting thread test...\n");
-	runthreads();
+	runthreads(nargs, args);
 	kprintf("\nThread test done.\n");
 
 	return 0;
@@ -118,7 +120,7 @@ threadtest2(int nargs, char **args)
 	(void)args;
 
 	init_sem();
-	kprintf("No longer implemented...");
+	kprintf("No longer implemented...\n");
 
 	return 0;
 }
