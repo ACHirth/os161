@@ -36,14 +36,16 @@
 #include <synch.h>
 #include <test.h>
 
-#define NTHREADS  8
 
 static struct semaphore *tsem = NULL;
 static struct semaphore *csem = NULL;
+static struct lock *cloc = 0;
+static struct spinlock sloc;
+volatile int counter = 0;
 
 static
 void
-init_sem(void)
+inits(void)
 {
 	if (tsem==NULL) {
 		tsem = sem_create("tsem", 0);
@@ -57,18 +59,37 @@ init_sem(void)
 			panic("threadtest: sem_create failed\n");
 		}
 	}
+	if (cloc == NULL){
+			cloc = lock_create("cloc");
+			if (cloc == NULL){
+				panic("threadtest: lock_create failed\n");
+			}
+	}
+	if (&sloc == NULL){
+		spinlock_init(&sloc);
+		if (&sloc == NULL){
+				panic("threadtest: spinlock_init failed\n");
+		}
+	}
+}
+
+static
+int
+toInt(char *args){
+	int r = 0;
+	for (int i = 0; args[i] != '\0'; i++){
+		r = r*10+(int)(args[i] - '0');
+	}
+	return r;
 }
 
 static
 void
 loudthread(void *junk, unsigned long num)
 {
-	char **args = junk;
-	int nargs = num;
+	(void)junk;
 	P(csem);
-		for(int i = 0; i < nargs; i++){
-			kprintf("The char is: %s\n", args[i]);
-		}
+	kprintf("This is thread num: %d\n", (int)num);
 	V(csem);
 	V(tsem);
 }
@@ -78,24 +99,23 @@ static
 void
 runthreads(int nargs, char **args)
 {
-	(void)nargs;
-	(void)args;
-	
+	int nthreads = args[1][0] - '0';
 	char name[16];
 	int i, result;
+	(void)nargs;
 
-	for (i=0; i<NTHREADS; i++) {
+	for (i=0; i<nthreads; i++) {
 		snprintf(name, sizeof(name), "threadtest%d", i);
 		result = thread_fork(name, NULL,
 				     loudthread,
-				     args, nargs);
+				     args, i);
 		if (result) {
 			panic("threadtest: thread_fork failed %s)\n", 
 			      strerror(result));
 		}
 	}
 
-	for (i=0; i<NTHREADS; i++) {
+	for (i=0; i<nthreads; i++) {
 		P(tsem);
 	}
 }
@@ -104,11 +124,12 @@ runthreads(int nargs, char **args)
 int
 threadtest(int nargs, char **args)
 {
-
-	init_sem();
+	inits();
 	kprintf("Starting thread test...\n");
-	runthreads(nargs, args);
-	kprintf("\nThread test done.\n");
+	if (nargs == 2){
+		runthreads(nargs, args);
+		kprintf("\nThread test done.\n");
+	}else{ kprintf("Usage: tt1 [number of threads]\n"); }
 
 	return 0;
 }
@@ -119,8 +140,164 @@ threadtest2(int nargs, char **args)
 	(void)nargs;
 	(void)args;
 
-	init_sem();
+	inits();
 	kprintf("No longer implemented...\n");
 
+	return 0;
+}
+
+
+static
+void
+utc(void *junk, unsigned long perthread){
+	(void)junk;
+	for(int i = (int)perthread; i > 0; i--){
+		counter++;
+	}
+	V(tsem);
+}
+
+
+int 
+unsafethreadcounter(int nargs, char **args)
+{
+	counter = 0;
+	int tds, ptd;
+	int i, result;
+	char name[16];
+	inits();
+	kprintf("Starting unsafethreadcounter...\n");
+	if (nargs == 3){
+		tds = toInt(args[1]);
+		ptd = toInt(args[2]);
+	}else if (nargs == 2){
+		tds = toInt(args[1]);
+		ptd = 10;
+	}else{ kprintf("Usage: utc [threads] [perthread] \n"); return 0;}
+	kprintf("\nRunning w/\n	threads: %d\n	perthread: %d\n", tds, ptd);
+	
+		for (i=0; i<tds; i++) {
+			snprintf(name, sizeof(name), "threadtest%d", i);
+			result = thread_fork(name, NULL,
+					     utc,
+					     args, ptd);//args is garbage, counter is global
+			if (result) {
+				panic("threadtest: thread_fork failed %s)\n", 
+					      strerror(result));
+			}
+		}
+	
+	kprintf("\nThread test done.\n");
+	kprintf("\nCounter intended value: %d\n", tds*ptd);
+
+	for (i=0; i<tds; i++) {
+		P(tsem);
+	}
+	kprintf("\nCounter actual value: %d\n", (int)counter);
+	return 0;
+}
+
+static
+void
+ltc(void *junk, unsigned long perthread){
+	(void)junk;
+	for(int i = (int)perthread; i > 0; i--){
+		lock_acquire(cloc);
+		counter++;
+		lock_release(cloc);
+	}
+	V(tsem);
+}
+
+
+int lockthreadcounter(int nargs, char **args)
+{
+	counter = 0;
+	int tds, ptd;
+	int i, result;
+	char name[16];
+	inits();
+	kprintf("Starting lockthreadcounter...\n");
+	if (nargs == 3){
+		tds = toInt(args[1]);
+		ptd = toInt(args[2]);
+	}else if (nargs == 2){
+		tds = toInt(args[1]);
+		ptd = 10;
+	}else{ kprintf("Usage: utc [threads] [perthread] \n"); return 0;}
+
+	kprintf("\nRunning w/\n	threads: %d\n	perthread: %d\n", tds, ptd);
+	
+		for (i=0; i<tds; i++) {
+			snprintf(name, sizeof(name), "threadtest%d", i);
+			result = thread_fork(name, NULL,
+					     ltc,
+					     args, ptd);//args is garbage, counter is global
+			if (result) {
+				panic("threadtest: thread_fork failed %s)\n", 
+					      strerror(result));
+			}
+		}
+	
+	kprintf("\nThread test done.\n");
+	kprintf("\nCounter intended value: %d\n", tds*ptd);
+
+
+	for (i=0; i<tds; i++) {
+		P(tsem);
+	}
+	kprintf("\nCounter actual value: %d\n", (int)counter);
+	return 0;
+}
+
+static
+void
+stc(void *junk, unsigned long perthread){
+	(void)junk;
+	for(int i = (int)perthread; i > 0; i--){
+		spinlock_acquire(&sloc);
+		counter++;
+		spinlock_release(&sloc);
+	}
+	V(tsem);
+}
+
+int spinlockthreadcounter(int nargs, char **args)
+{
+	counter = 0;
+	int tds, ptd;
+	int i, result;
+	char name[16];
+	inits();
+	kprintf("Starting spinlockthreadcounter...\n");
+	if (nargs == 3){
+		tds = toInt(args[1]);
+		ptd = toInt(args[2]);
+	}else if (nargs == 2){
+		tds = toInt(args[1]);
+		ptd = 10;
+	}else{ kprintf("Usage: utc [threads] [perthread] \n"); return 0;}
+
+	kprintf("\nRunning w/\n	threads: %d\n	perthread: %d\n", tds, ptd);
+	
+		for (i=0; i<tds; i++) {
+			snprintf(name, sizeof(name), "threadtest%d", i);
+			result = thread_fork(name, NULL,
+					     stc,
+					     args, ptd);//args is garbage, counter is global
+			if (result) {
+				panic("threadtest: thread_fork failed %s)\n", 
+					      strerror(result));
+			}
+		}
+	
+	kprintf("\nThread test done.\n");
+	kprintf("\nCounter intended value: %d\n", tds*ptd);
+
+
+	for (i=0; i<tds; i++) {
+		P(tsem);
+	}
+	kprintf("\nCounter actual value: %d\n", (int)counter);
 	return 0;
 }

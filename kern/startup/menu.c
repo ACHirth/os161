@@ -479,6 +479,9 @@ static const char *testmenu[] = {
 	"[sy1] Semaphore test                ",
 	"[sy2] Lock test             (1)     ",
 	"[sy3] CV test               (1)     ",
+	"[utc] Unsafe Thread Counter         ",
+	"[ltc] Lock Thread Counter           ",
+	"[stc] Spinlock Thread Counter       ",
 #ifdef UW
 	"[uw1] UW lock test          (1)     ",
 	"[uw2] UW vmstats test       (3)     ",
@@ -587,6 +590,9 @@ static struct {
 	{ "tt1",	threadtest },
 	{ "tt2",	threadtest2 },
 	{ "tt3",	threadtest3 },
+	{ "utc",	unsafethreadcounter },
+	{ "ltc",	lockthreadcounter },
+	{ "stc",	spinlockthreadcounter },
 	{ "sy1",	semtest },
 
 	/* synchronization assignment tests */
